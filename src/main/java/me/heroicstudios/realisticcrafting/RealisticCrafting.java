@@ -9,6 +9,7 @@ import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.PrepareItemCraftEvent;
 import org.bukkit.inventory.CraftingInventory;
@@ -59,7 +60,7 @@ public class RealisticCrafting extends JavaPlugin implements Listener {
         }
 
         ItemStack result = event.getInventory().getResult();
-        if (result == null || !isToolOrArmor(result.getType())) {
+        if (result == null || !isToolOrArmor(result.getType()) || isBlacklisted(result)) {
             return;
         }
 
@@ -82,9 +83,18 @@ public class RealisticCrafting extends JavaPlugin implements Listener {
 
         if (event.getWhoClicked() instanceof Player player) {
             if (event.getClickedInventory() instanceof CraftingInventory) {
-                ItemStack clickedItem = event.getCurrentItem();
                 UUID playerId = player.getUniqueId();
+                ItemStack clickedItem = event.getCurrentItem();
 
+                // Prevent dropping the crafting result
+                if ((event.getAction() == InventoryAction.DROP_ALL_SLOT || event.getAction() == InventoryAction.DROP_ONE_SLOT)
+                        && clickedItem != null && clickedItem.getType() == Material.PLAYER_HEAD && craftingResults.containsKey(playerId)) {
+                    event.setCancelled(true);
+                    player.sendMessage("§cYou cannot drop the crafting result.");
+                    return;
+                }
+
+                // Handle crafting result replacement
                 if (clickedItem != null && clickedItem.getType() == Material.PLAYER_HEAD && craftingResults.containsKey(playerId)) {
                     // Replace the placeholder with the actual randomized item
                     ItemStack actualResult = craftingResults.get(playerId);
@@ -99,6 +109,8 @@ public class RealisticCrafting extends JavaPlugin implements Listener {
             }
         }
     }
+
+
 
     private boolean isToolOrArmor(Material material) {
         // Check if the material is a tool or armor piece
@@ -125,7 +137,8 @@ public class RealisticCrafting extends JavaPlugin implements Listener {
         if (chance < config.getInt("chances.normal", 50)) {
             return baseItem;
         } else if (chance < config.getInt("chances.normal", 50) + config.getInt("chances.broken", 35)) {
-            int reducedDurability = (int) (baseItem.getType().getMaxDurability() * 0.85);
+            double reductionPercentage = config.getDouble("durability-reduction", 85) / 100.0;
+            int reducedDurability = (int) (baseItem.getType().getMaxDurability() * reductionPercentage);
             baseItem.setDurability((short) reducedDurability);
             return baseItem;
         } else {
@@ -133,34 +146,55 @@ public class RealisticCrafting extends JavaPlugin implements Listener {
             return baseItem;
         }
     }
+    private boolean isBlacklisted(ItemStack item) {
+        String itemName = item.getType().name();
+        return config.getStringList("blacklist").contains(itemName);
+    }
+
 
     private void addRandomEnchantment(ItemStack item) {
-        Material type = item.getType();
-        if (type.name().endsWith("_SWORD") || type.name().endsWith("_AXE")) {
-            if (random.nextBoolean()) {
-                item.addEnchantment(Enchantment.SHARPNESS, 1);
-            } else {
-                item.addEnchantment(Enchantment.UNBREAKING, 1);
+        String itemName = item.getType().name();
+        if (config.contains("enchantments." + itemName)) {
+            List<Map<?, ?>> enchantments = config.getMapList("enchantments." + itemName);
+
+            for (Map<?, ?> enchantmentData : enchantments) {
+                String enchantmentType = (String) enchantmentData.get("type");
+                int enchantmentLevel = (int) enchantmentData.get("level");
+
+                Enchantment enchantment = Enchantment.getByName(enchantmentType);
+                if (enchantment != null) {
+                    item.addUnsafeEnchantment(enchantment, enchantmentLevel);
+                }
             }
-        } else if (type.name().endsWith("_PICKAXE") || type.name().endsWith("_AXE") || type.name().endsWith("_SHOVEL") || type.name().endsWith("_HOE")) {
-            if (random.nextBoolean()) {
-                item.addEnchantment(Enchantment.EFFICIENCY, 1);
-            } else {
+        } else {
+            // Default random enchantment behavior if no specific enchantment is defined
+            if (itemName.endsWith("_SWORD") || itemName.endsWith("_AXE")) {
+                if (random.nextBoolean()) {
+                    item.addEnchantment(Enchantment.SHARPNESS, 1);
+                } else {
+                    item.addEnchantment(Enchantment.UNBREAKING, 1);
+                }
+            } else if (itemName.endsWith("_PICKAXE") || itemName.endsWith("_AXE") || itemName.endsWith("_SHOVEL") || itemName.endsWith("_HOE")) {
+                if (random.nextBoolean()) {
+                    item.addEnchantment(Enchantment.EFFICIENCY, 1);
+                } else {
+                    item.addEnchantment(Enchantment.UNBREAKING, 1);
+                }
+            } else if (itemName.endsWith("_HELMET") || itemName.endsWith("_CHESTPLATE") ||
+                    itemName.endsWith("_LEGGINGS") || itemName.endsWith("_BOOTS")) {
+                item.addEnchantment(Enchantment.PROTECTION, 1);
+            } else if (itemName.contains("FISHING_ROD")) {
+                item.addEnchantment(Enchantment.LURE, 1);
+            } else if (itemName.contains("SHIELD")) {
                 item.addEnchantment(Enchantment.UNBREAKING, 1);
+            } else if (itemName.contains("CROSSBOW")) {
+                item.addEnchantment(Enchantment.PIERCING, 1);
+            } else if (itemName.contains("MACE")) {
+                item.addEnchantment(Enchantment.BREACH, 1);
             }
-        } else if (type.name().endsWith("_HELMET") || type.name().endsWith("_CHESTPLATE") ||
-                type.name().endsWith("_LEGGINGS") || type.name().endsWith("_BOOTS")) {
-            item.addEnchantment(Enchantment.PROTECTION, 1);
-        } else if (type.name().contains("FISHING_ROD")) {
-            item.addEnchantment(Enchantment.LURE, 1);
-        } else if (type.name().contains("SHIELD")) {
-            item.addEnchantment(Enchantment.UNBREAKING, 1);
-        } else if (type.name().contains("CROSSBOW")) {
-            item.addEnchantment(Enchantment.PIERCING, 1);
-        } else if (type.name().contains("MACE")) {
-            item.addEnchantment(Enchantment.BREACH, 1);
         }
     }
+
 
     private void sendCraftingMessage(Player player, ItemStack item) {
         if (item.getItemMeta().hasEnchants()) {

@@ -1,22 +1,62 @@
+# Enable or disable the entire plugin.
 plugin-enabled: true
 
+# Base64 encoded texture for the placeholder head displayed during crafting.
+# This texture will be shown to players while the item is being randomized.
 head-texture: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMTAzNWM1MjgwMzZiMzg0YzUzYzljOGExYTEyNTY4NWUxNmJmYjM2OWMxOTdjYzlmMDNkZmEzYjgzNWIxYWE1NSJ9fX0="
 
+# Configure the chances (in percentages) for each type of crafting outcome.
 chances:
+  # The chance that the item will be crafted as a normal item.
   normal: 50
+
+  # The chance that the item will be crafted as a broken item.
+  # When an item is broken, its durability will be reduced.
   broken: 35
+
+  # The chance that the item will be crafted as an enchanted item.
   enchanted: 15
 
+# Define the percentage of durability that remains when an item is crafted as broken.
+# For example, if set to 85, the crafted item will have 85% of its maximum durability.
+durability-reduction: 85  # Percentage of durability remaining on broken items
+
+# Custom messages displayed to the player when they craft different types of items.
 messages:
+  # Message shown when a player crafts a normal item.
   normal: "§eYou crafted a normal item."
+
+  # Message shown when a player crafts a broken item.
   broken: "§c§lOOF §cYou crafted a broken item."
+
+  # Message shown when a player crafts an enchanted item.
   enchanted: "§2§lWOW! §2You crafted an enchanted item."
 
+# Disable the plugin's effects for specific item types.
+# Set these to true if you don't want the plugin to affect these items.
 disable-for:
-  armor: false
-  tools: false
-  crossbows: false # Enable this if below 1.14
-  bows: false
-  shields: false
-  mace: true  # Enable this if below 1.21
-  wolf_armor: true  # Enable this if below 1.21
+  armor: false         # Disable for armor pieces (helmets, chestplates, leggings, boots)
+  tools: false         # Disable for tools (swords, pickaxes, axes, shovels, hoes)
+  crossbows: false     # Disable for crossbows (useful for versions below 1.14)
+  bows: false          # Disable for bows
+  shields: false       # Disable for shields
+  mace: true           # Disable for maces (useful for versions below 1.21)
+  wolf_armor: true     # Disable for wolf armor (useful for versions below 1.21)
+
+# Blacklist specific items to prevent them from being affected by the plugin
+blacklist:
+  - EXAMPLE_SWORD
+  - EXAMPLE_LEGGINGS
+
+# Specific enchantments for certain tools
+enchantments:
+  DIAMOND_SWORD:
+    - type: SHARPNESS
+      level: 2
+    - type: UNBREAKING
+      level: 3
+  IRON_PICKAXE:
+    - type: EFFICIENCY
+      level: 3
+    - type: FORTUNE
+      level: 2
